@@ -68,33 +68,36 @@
       const charLength = document.getElementById("charLength").value;
       const numParagraphs = document.getElementById("numParagraphs").value;
 
-      document.getElementById("output").innerText = "⏳ Generating blog...";
+      const outputEl = document.getElementById("output");
+      outputEl.innerText = "⏳ Generating blog...";
 
       try {
-        const response = await fetch("/api/generate", {
+        const response = await fetch("https://blog-ai-rho.vercel.app/api/generate", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            topic,
-            charLength,
-            numParagraphs
-          })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic, charLength, numParagraphs })
         });
 
         const data = await response.json();
 
-        if (data.output) {
-          document.getElementById("output").innerText = data.output;
+        // Flexible parsing for backend variations
+        const text =
+          data.output ??
+          data.content ??
+          data.blog ??
+          data?.choices?.[0]?.message?.content ??
+          "";
+
+        if (text) {
+          outputEl.innerText = text;
         } else {
-          document.getElementById("output").innerText =
-            "⚠️ Error: " + (data.error || "Something went wrong");
+          outputEl.innerText =
+            "⚠️ Error: " + (data.error || "No content returned from server");
+          console.error("API response (unexpected):", data);
         }
       } catch (err) {
-        document.getElementById("output").innerText =
-          "❌ Request failed. Please try again.";
-        console.error(err);
+        outputEl.innerText = "❌ Request failed. Please try again.";
+        console.error("Fetch error:", err);
       }
     }
   </script>
