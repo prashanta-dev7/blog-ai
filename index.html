@@ -1,174 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Blog Generator</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f3f4f6;
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #fafafa;
+    }
+    h1 {
+      color: #333;
+    }
+    label {
+      display: block;
+      margin: 15px 0 5px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #222;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #444;
+    }
+    #output {
+      margin-top: 25px;
+      padding: 15px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      min-height: 120px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
-<body class="p-6 md:p-10 min-h-screen flex items-center justify-center">
+<body>
+  <h1>AI Blog Generator</h1>
 
-  <div class="w-full max-w-4xl bg-white rounded-xl shadow-lg p-6 md:p-8">
-    <h1 class="text-3xl font-bold text-gray-800 text-center mb-6">AI Blog Post Generator 📝</h1>
-    <p class="text-center text-gray-600 mb-8">Create engaging blog content effortlessly. Provide a topic and parameters, and let AI do the rest!</p>
+  <label for="topic">Blog Topic:</label>
+  <input type="text" id="topic" placeholder="e.g., Indian Bridal Wear" />
 
-    <form id="generator-form" class="space-y-6">
-      <!-- Blog Topic Input -->
-      <div class="relative">
-        <label for="topic" class="block text-sm font-medium text-gray-700 mb-1">Blog Topic</label>
-        <input type="text" id="topic" name="topic" placeholder="e.g., The Art of Luxury Watches" required
-          class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 transition-colors duration-200">
-      </div>
+  <label for="charLength">Character Length:</label>
+  <input type="number" id="charLength" placeholder="e.g., 1000" />
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Character Length Input -->
-        <div class="relative">
-          <label for="charLength" class="block text-sm font-medium text-gray-700 mb-1">Approx. Character Length</label>
-          <input type="number" id="charLength" name="charLength" placeholder="e.g., 2000" required
-            class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 transition-colors duration-200">
-        </div>
+  <label for="numParagraphs">Number of Paragraphs:</label>
+  <input type="number" id="numParagraphs" placeholder="e.g., 2" />
 
-        <!-- Number of Paragraphs Input -->
-        <div class="relative">
-          <label for="numParagraphs" class="block text-sm font-medium text-gray-700 mb-1">Number of Paragraphs</label>
-          <input type="number" id="numParagraphs" name="numParagraphs" placeholder="e.g., 5" required
-            class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3 transition-colors duration-200">
-        </div>
-      </div>
+  <button onclick="generateBlog()">Generate Blog</button>
 
-      <!-- Generate Button -->
-      <div class="pt-4">
-        <button type="submit" id="generate-btn"
-          class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-          Generate Blog Post
-        </button>
-      </div>
-    </form>
-
-    <!-- Loading Spinner -->
-    <div id="loading-spinner" class="mt-8 text-center hidden">
-      <svg class="animate-spin h-8 w-8 text-gray-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-      <p class="mt-2 text-sm text-gray-500">Generating content...</p>
-    </div>
-
-    <!-- Custom Message Box -->
-    <div id="message-box" class="mt-4 p-4 rounded-lg text-sm hidden" role="alert">
-      <p id="message-text"></p>
-    </div>
-
-    <!-- Generated Blog Post Output -->
-    <div id="blog-output-container" class="mt-8 hidden">
-      <label class="block text-lg font-bold text-gray-800 mb-2">Generated Blog Post</label>
-      <textarea id="blog-output" rows="15" readonly
-        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-4 bg-gray-50 focus:outline-none resize-none"></textarea>
-    </div>
-  </div>
+  <div id="output">Your blog will appear here...</div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const form = document.getElementById('generator-form');
-      const topicInput = document.getElementById('topic');
-      const charLengthInput = document.getElementById('charLength');
-      const numParagraphsInput = document.getElementById('numParagraphs');
-      const generateBtn = document.getElementById('generate-btn');
-      const loadingSpinner = document.getElementById('loading-spinner');
-      const blogOutputContainer = document.getElementById('blog-output-container');
-      const blogOutput = document.getElementById('blog-output');
-      const messageBox = document.getElementById('message-box');
-      const messageText = document.getElementById('message-text');
+    async function generateBlog() {
+      const topic = document.getElementById("topic").value;
+      const charLength = document.getElementById("charLength").value;
+      const numParagraphs = document.getElementById("numParagraphs").value;
 
-      const OPENAI_API_KEY = "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";
+      document.getElementById("output").innerText = "⏳ Generating blog...";
 
-      const showMessage = (message, type) => {
-        messageText.textContent = message;
-        messageBox.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-yellow-100', 'text-yellow-700', 'bg-green-100', 'text-green-700');
-        if (type === 'error') {
-          messageBox.classList.add('bg-red-100', 'text-red-700');
-        } else if (type === 'warning') {
-          messageBox.classList.add('bg-yellow-100', 'text-yellow-700');
+      try {
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            topic,
+            charLength,
+            numParagraphs
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.output) {
+          document.getElementById("output").innerText = data.output;
         } else {
-          messageBox.classList.add('bg-green-100', 'text-green-700');
+          document.getElementById("output").innerText =
+            "⚠️ Error: " + (data.error || "Something went wrong");
         }
-      };
-
-      const hideMessage = () => {
-        messageBox.classList.add('hidden');
-      };
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        hideMessage();
-
-        const topic = topicInput.value;
-        const charLength = charLengthInput.value;
-        const numParagraphs = numParagraphsInput.value;
-
-        if (!topic || !charLength || !numParagraphs) {
-          showMessage("Please fill in all fields.", 'warning');
-          return;
-        }
-
-        generateBtn.disabled = true;
-        loadingSpinner.classList.remove('hidden');
-        blogOutputContainer.classList.add('hidden');
-        blogOutput.value = "";
-
-        try {
-          // ✅ System + User instructions for consistent brand tone + SEO
-          const messages = [
-            {
-              role: "system",
-              content: "You are a professional blog writer for a luxury fashion brand. Always write in a refined, elegant, and human-like tone. Make content SEO-friendly with natural keyword usage. Avoid AI-like phrasing, repetition, and generic filler. Every blog must read as if written by an experienced human fashion editor."
-            },
-            {
-              role: "user",
-              content: `Write a blog post about "${topic}". The post should be around ${charLength} characters long and have ${numParagraphs} paragraphs.`
-            }
-          ];
-
-          const response = await fetch("https://blog-ai-rho.vercel.app/api/generate", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer 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`
-            },
-            body: JSON.stringify({
-              model: "gpt-4o-mini",  // ⚡ Better quality + cheaper than gpt-3.5
-              messages: messages,
-              max_tokens: 2000, // ✅ more flexibility for long posts
-              temperature: 0.7,
-            })
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error.message || "Failed to generate content.");
-          }
-
-          const data = await response.json();
-          const content = data.choices[0].message.content;
-          blogOutput.value = content;
-          blogOutputContainer.classList.remove('hidden');
-        } catch (error) {
-          console.error("Error generating blog post:", error);
-          showMessage(`An error occurred: ${error.message}`, 'error');
-        } finally {
-          generateBtn.disabled = false;
-          loadingSpinner.classList.add('hidden');
-        }
-      });
-    });
+      } catch (err) {
+        document.getElementById("output").innerText =
+          "❌ Request failed. Please try again.";
+        console.error(err);
+      }
+    }
   </script>
 </body>
 </html>
