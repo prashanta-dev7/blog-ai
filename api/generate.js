@@ -1,13 +1,11 @@
 // /api/generate.js
 
 export default async function handler(req, res) {
-  // --- Handle CORS ---
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
-    // Preflight request → just return OK
     return res.status(200).end();
   }
 
@@ -16,13 +14,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { topic, charLength, numParagraphs } = req.body;
+    // ✅ Parse JSON body properly
+    const body = req.body || (await new Promise((resolve) => {
+      let data = "";
+      req.on("data", (chunk) => (data += chunk));
+      req.on("end", () => resolve(JSON.parse(data || "{}")));
+    }));
+
+    const { topic, charLength, numParagraphs } = body;
 
     if (!topic || !charLength || !numParagraphs) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // --- Call OpenAI ---
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -30,11 +34,11 @@ export default async function handler(req, res) {
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // you can switch to gpt-4.1 or gpt-4.1-turbo for bigger blogs
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: "You are a professional blog writer. Always write SEO-friendly, luxury, and aesthetic blog posts in the brand's tone. Keep paragraphs structured and engaging."
+            content: "You are a professional blog writer. Always write SEO-friendly, luxury, and aesthetic blog posts in the brand's tone."
           },
           {
             role: "user",
@@ -46,12 +50,14 @@ export default async function handler(req, res) {
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || "OpenAI API call failed");
+    const data = await response.json();
+
+    // ✅ Safety check
+    if (!data.choices || !data.choices.length) {
+      console.error("OpenAI response error:", data);
+      return res.status(500).json({ error: "Invalid response from OpenAI", details: data });
     }
 
-    const data = await response.json();
     const content = data.choices[0].message.content;
 
     return res.status(200).json({ blog: content });
