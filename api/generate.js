@@ -1,47 +1,138 @@
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+// /api/generate.js
+// ESM (package.json should include: { "type": "module" })
 
-  const { topic, charLength, numParagraphs } = req.body;
+function setCORS(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+function parseBody(req) {
+  return new Promise((resolve) => {
+    if (req.body && typeof req.body !== "string") return resolve(req.body);
+    let data = "";
+    req.on("data", (chunk) => (data += chunk));
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(data || "{}"));
+      } catch {
+        resolve({});
+      }
+    });
+  });
+}
+
+// ----------- STYLE GUIDE (rules only, extracted from your references) -----------
+const STYLE_GUIDE = `
+[BRAND TONE]
+- Voice: refined, editorial, confident, approachable, and rooted in fashion expertise.
+- Rhythm: varied sentence lengths; natural transitions; balanced flow (no robotic cadence).
+- Diction: use precise fashion vocabulary (silhouettes, fabrics, embellishments, styling cues).
+- POV: authoritative but conversational; inclusive and reader-friendly.
+- Formality: polished yet warm—write like a seasoned fashion editor speaking to a style-conscious reader.
+
+[WRITING STYLE]
+- Open with a strong hook or contextual statement that sets the stage.
+- Use subheadings (H2/H3) to structure the piece clearly (especially for guides and listicles).
+- Provide descriptive details (fabric, cut, embroidery, drape, finish, accessories, occasions).
+- Tie content to cultural or fashion contexts (festive seasons, celebrity styles, runway trends).
+- Keep paragraphs concise and skimmable; avoid walls of text.
+- When lists are natural, use bullet points or numbered lists for clarity.
+
+[SEO RULES]
+- Make content SEO-friendly but human-first; no keyword stuffing.
+- Use clear, descriptive titles and subheads.
+- Conclude with SEO metadata:
+  • SEO Title (<=60 chars)
+  • Meta Description (<=160 chars)
+  • slug (short, lowercase, hyphenated)
+  • tags (5–8 relevant keywords)
+
+[FORMATTING RULES]
+- Do NOT use em dashes (—). Instead, use commas, colons, or full stops for smooth readability.
+`;
+
+function composeSystemPrompt(styleGuide, topic) {
+  return [
+    "You are a professional blog writer for a luxury fashion brand.",
+    "Your job is to produce SEO-friendly, human-first editorials that read like a seasoned fashion editor.",
+    "Follow the BRAND TONE, WRITING STYLE, SEO RULES, and FORMATTING RULES strictly. Never copy external sources verbatim.",
+    "",
+    "== STYLE GUIDE ==",
+    styleGuide.trim(),
+    "",
+    `== CONTEXT ==\nTopic focus: ${topic}`,
+  ].join("\n");
+}
+
+export default async function handler(req, res) {
+  setCORS(res);
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: "Missing OpenAI API key" });
+    return res.status(500).json({ error: "Missing OPENAI_API_KEY on server" });
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const body = await parseBody(req);
+    const { topic, charLength, numParagraphs } = body;
+
+    if (!topic || !charLength || !numParagraphs) {
+      return res.status(400).json({ error: "Missing required fields: topic, charLength, numParagraphs" });
+    }
+
+    const systemPrompt = composeSystemPrompt(STYLE_GUIDE, topic);
+
+    const userPrompt = [
+      `Write a blog on: "${topic}".`,
+      `Target length: ~${charLength} characters.`,
+      `Paragraphs: ${numParagraphs}.`,
+      "",
+      "Formatting requirements:",
+      "- Use H2/H3 subheadings where they improve readability.",
+      "- Include light internal structuring (bullets/numbers) when it adds clarity.",
+      "- End with a block titled 'SEO Metadata' containing:",
+      "  • SEO Title",
+      "  • Meta Description",
+      "  • slug",
+      "  • tags",
+    ].join("\n");
+
+    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a professional blog writer for a luxury fashion brand. Always write in a refined, elegant, and human-like tone. Make content SEO-friendly with natural keyword usage. Avoid AI-like phrasing, repetition, and generic filler. Every blog must read as if written by an experienced human fashion editor.",
-          },
-          {
-            role: "user",
-            content: `Write a blog post about "${topic}". The post should be around ${charLength} characters long and have ${numParagraphs} paragraphs.`,
-          },
-        ],
-        max_tokens: 2000,
         temperature: 0.7,
+        max_tokens: 2000,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
       }),
     });
 
-    const data = await response.json();
+    const data = await apiRes.json();
 
-    if (response.ok) {
-      res.status(200).json({ content: data.choices[0].message.content });
-    } else {
-      res.status(500).json({ error: data.error?.message || "Failed to generate" });
+    if (!apiRes.ok) {
+      return res.status(apiRes.status).json({
+        error: data?.error?.message || "OpenAI API error",
+        raw: data,
+      });
     }
+
+    const output = data?.choices?.[0]?.message?.content || "";
+    if (!output) {
+      return res.status(500).json({ error: "No content returned from model", raw: data });
+    }
+
+    return res.status(200).json({ output });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Server Error:", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }
