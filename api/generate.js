@@ -22,7 +22,7 @@ function parseBody(req) {
   });
 }
 
-// ----------- STYLE GUIDE (rules only, extracted from your references) -----------
+// ----------- STYLE GUIDE -----------
 const STYLE_GUIDE = `
 [BRAND TONE]
 - Voice: refined, editorial, confident, approachable, and rooted in fashion expertise.
@@ -39,24 +39,16 @@ const STYLE_GUIDE = `
 - Keep paragraphs concise and skimmable; avoid walls of text.
 - When lists are natural, use bullet points or numbered lists for clarity.
 
-[SEO RULES]
-- Make content SEO-friendly but human-first; no keyword stuffing.
-- Use clear, descriptive titles and subheads.
-- Conclude with SEO metadata:
-  • SEO Title (<=60 chars)
-  • Meta Description (<=160 chars)
-  • slug (short, lowercase, hyphenated)
-  • tags (5–8 relevant keywords)
-
 [FORMATTING RULES]
 - Do NOT use em dashes (—). Instead, use commas, colons, or full stops for smooth readability.
+- Do NOT include SEO metadata in the output.
 `;
 
 function composeSystemPrompt(styleGuide, topic) {
   return [
     "You are a professional blog writer for a luxury fashion brand.",
     "Your job is to produce SEO-friendly, human-first editorials that read like a seasoned fashion editor.",
-    "Follow the BRAND TONE, WRITING STYLE, SEO RULES, and FORMATTING RULES strictly. Never copy external sources verbatim.",
+    "Follow the BRAND TONE, WRITING STYLE, and FORMATTING RULES strictly. Never copy external sources verbatim.",
     "",
     "== STYLE GUIDE ==",
     styleGuide.trim(),
@@ -76,7 +68,7 @@ export default async function handler(req, res) {
 
   try {
     const body = await parseBody(req);
-    const { topic, charLength, numParagraphs } = body;
+    const { topic, charLength, numParagraphs, additional } = body;
 
     if (!topic || !charLength || !numParagraphs) {
       return res.status(400).json({ error: "Missing required fields: topic, charLength, numParagraphs" });
@@ -84,20 +76,19 @@ export default async function handler(req, res) {
 
     const systemPrompt = composeSystemPrompt(STYLE_GUIDE, topic);
 
-    const userPrompt = [
+    let userPrompt = [
       `Write a blog on: "${topic}".`,
       `Target length: ~${charLength} characters.`,
       `Paragraphs: ${numParagraphs}.`,
       "",
       "Formatting requirements:",
       "- Use H2/H3 subheadings where they improve readability.",
-      "- Include light internal structuring (bullets/numbers) when it adds clarity.",
-      "- End with a block titled 'SEO Metadata' containing:",
-      "  • SEO Title",
-      "  • Meta Description",
-      "  • slug",
-      "  • tags",
+      "- Include light internal structuring (bullets/numbers) when it adds clarity."
     ].join("\n");
+
+    if (additional && String(additional).trim()) {
+      userPrompt += `\n\nAdditional requests (must follow): ${additional}`;
+    }
 
     const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
