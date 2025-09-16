@@ -14,7 +14,6 @@
       --aza-text: #1f2937;
       --aza-subtle:#6b7280;
       --aza-accent:#b08968;
-      --aza-accent-2:#e6d5c5;
       --aza-accent-dark:#8d6f54;
       --aza-border:#e5e7eb;
       --aza-success:#16a34a;
@@ -46,21 +45,25 @@
       <form id="generator-form" class="space-y-5">
         <div>
           <label class="block text-sm font-semibold mb-1">Blog Topic</label>
-          <input id="topic" class="input" type="text" required/>
+          <input id="topic" class="input" type="text" placeholder="e.g., Festive Saree Trends for 2025" required/>
+          <p class="text-xs text-[color:var(--aza-subtle)] mt-1">This is the central theme or subject of your blog.</p>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-semibold mb-1">Character Length</label>
-            <input id="charLength" class="input" type="number" required/>
+            <input id="charLength" class="input" type="number" placeholder="e.g., 1500" required/>
+            <p class="text-xs text-[color:var(--aza-subtle)] mt-1">Approximate total character count of the blog.</p>
           </div>
           <div>
             <label class="block text-sm font-semibold mb-1">Paragraphs</label>
-            <input id="numParagraphs" class="input" type="number" required/>
+            <input id="numParagraphs" class="input" type="number" placeholder="e.g., 5" required/>
+            <p class="text-xs text-[color:var(--aza-subtle)] mt-1">Desired number of paragraphs for better readability and flow.</p>
           </div>
         </div>
         <div>
           <label class="block text-sm font-semibold mb-1">Additional Requests (optional)</label>
-          <textarea id="additional" class="textarea" rows="3"></textarea>
+          <textarea id="additional" class="textarea" rows="3" placeholder="e.g., Include a styling checklist; keep tone playful."></textarea>
+          <p class="text-xs text-[color:var(--aza-subtle)] mt-1">Anything written here will be passed to the generator as extra instructions.</p>
         </div>
         <button id="generate-btn" type="submit" class="btn-primary w-full">Generate Blog</button>
         <div id="message-box" class="hidden text-sm rounded-xl p-3"></div>
